@@ -1,0 +1,502 @@
+#!/usr/bin/env lua
+
+local lfs = require("lfs")
+local json = require("dkjson")
+
+local installDir = "/var/tmp/dcs-get"
+local baseUrl = "http://backus.uwcs.co.uk/dcs-get"
+
+local helpMessage = [[
+dcs-get - Warwick Compsoc Unprivileged Package Manager
+
+Usage:
+	dcs-get {install|reinstall} package_name ...
+	dcs-get {list|list-installed}
+	dcs-get search "search_string"
+	dcs-get clean
+	dcs-get {gensymlinks|package|upload} package_directory_name
+	dcs-get update
+	dcs-get {help|--help|-h}
+
+Mode names can be shortened to the following:
+	i: install, r: reinstall, s: search, l:list, li: list-installed,
+	c: clean, g: gensymlinks, p: package, u: upload
+
+Modes:
+	install
+		Installs given packages if not already installed, and their dependencies
+	reinstall
+		Clears installation folders and reinstalls packages, and dependencies
+	list
+		Lists info for all packages
+	list-installed
+		Lists installed package names
+	search
+		Lists info for packages with names matching search_string
+
+Advanced modes:
+	update - Re-downloads packages.json
+	uninstall - Deletes all the files associated with a package
+	clean - Removes all your dcs-get installation files and packages
+	gensymlinks - Mirrors relevant files from ]] .. installDir .. [[/package_directory_name in bin, lib, etc.
+	package - Creates .tar.gz from package_directory_name and its symlinks in ]] .. installDir .. [[/downloaded
+	upload - Uploads package_directory_name.tar.gz from downloaded directory to the server
+
+For support please mail techteam@uwcs.co.uk
+]] .. baseUrl .. [[
+]]
+
+-- Stores current static packages info from packages.json file
+local packages
+
+-- Return file/dir mode "file", "directory", etc. (follows symlinks)
+-- Returns nil on access error (file not exist, no permission, ...)
+local function isMode(path, mode)
+	local attr = lfs.attributes(path)
+	if attr then
+		return attr.mode == mode
+	else
+		return false
+	end
+end
+
+-- Return file/dir mode, can detect a symlink ("link")
+local function isLinkMode(path, mode)
+	local attr = lfs.symlinkattributes(path)
+	if attr then
+		return attr.mode == mode
+	else
+		return false
+	end
+end
+
+-- Mirrors a directory structure using symlinks (symbolic links)
+local function symlinkMirror(outputDir, targetDir)
+	-- Check output path exists
+	if not lfs.attributes(outputDir) then
+		-- If not then create it
+		if not lfs.mkdir(outputDir) then
+			error("Unable to use/create output symlink dir " .. outputDir)
+		end
+	end
+	-- Link files, recursively link directories (but not symlink directories)
+	for dirEntry in lfs.dir(targetDir) do
+		local entryPath = targetDir.."/"..dirEntry
+		local outputPath = outputDir.."/"..dirEntry
+		-- Ignore implicit directories
+		if dirEntry ~= "." and dirEntry ~= ".." then
+			-- Symlinks and regular files get symlinked
+			if isSymlinkMode(entryPath, "link") or isSymlinkMode(entryPath, "file") then
+				if not os.execute("ln --symbolic --relative " .. entryPath .. " " .. outputPath) then
+					print("dcs-get: Failed to create symlink at " .. outputPath)
+				end
+			-- Directories are called recursively
+			elseif isMode(entryPath, "directory") then
+				symlinkMirror(outputPath, entryPath)
+			end
+		end
+	end
+end
+
+-- Check if a package is installed
+local function isInstalled(package, version)
+	if isMode(installDir .. "/" .. package .. "-" .. version, "directory") then
+		for _, checkVersion in ipairs(packages[package].version) do
+			if version == checkVersion then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+-- Get package name and version from versioned string
+local function splitVersionedName(versionedPackage)
+	local i = 0
+	while versionedPackage:find("-.+$", i + 1) do
+		i = versionedPackage:find("-.+$", i + 1)
+		local package = versionedPackage:sub(1, i - 1)
+		local version = versionedPackage:sub(i + 1)
+		if packages[package] then
+			for _, allowedVersion in ipairs(packages[package].version) do
+				if version == allowedVersion then
+					return package, version
+				end
+			end
+		end
+	end
+	return nil
+end
+
+-- Checks if a package is listed as manually requested
+local function isRequested(package, version)
+	os.execute("touch " .. installDir .. "/requested")
+	local requestedFile = io.input(installDir .. "/requested")
+	if not requestedFile then
+		return false
+	end
+	local line = requestedFile:read("*line")
+	while line do
+		if line == package .. "-" .. version then
+			requestedFile:close()
+			return true
+		end
+		line = requestedFile:read("*line")
+	end
+	requestedFile:close()
+	return false
+end
+
+-- Adds a package to the list of manually requested packages
+local function setRequested(package, version, newRequestedState)
+	-- Is already requested?
+	if isRequested(package, version) then
+		if not newRequestedState then
+			-- Collect lines that aren't the package
+			os.execute("touch " .. installDir .. "/requested")
+			local requestedFile = io.input(installDir .. "/requested")
+			local requestedFileLines = {}
+			for line in requestedFile:lines() do
+				if line ~= package .. "-" .. version then
+					requestedFileLines:insert(line)
+				end
+			end
+			requestedFile:close()
+			
+			-- Write ammended list
+			requestedFile = io.output(installDir .. "/requested")
+			for _, line in ipairs(requestedFile) do
+				requestedFile:write(line .. "\n")
+			end
+			requestedFile:close()
+		end
+	
+	-- Not already requested
+	else
+		if newRequestedState then
+			-- Write package to end of file
+			os.execute("touch " .. installDir .. "/requested")
+			local requestedFile = io.open(installDir .. "/requested", "a")
+			requestedFile:write(package .. "-" .. version .. "\n")
+			requestedFile:close()
+		end
+	end
+end
+
+-- Gets a complete list of dependencies (root dependencies first)
+-- First call does not need currentList, currentSet or loopSet arguments
+local function dependenciesList(package, version, currentList, currentSet, loopSet)
+	-- currentList stores list of package dependencies in order of want
+	currentList = currentList or {}
+	
+	-- currentSet stores the packages which are already on the list
+	currentSet = currentSet or {}
+	currentSet[package] = currentSet[package] or {}
+	
+	-- loopSet stores the packages which have already been visited recursively
+	loopSet = loopSet or {}
+	loopSet[package] = loopSet[package] or {}
+	
+	-- Make sure we're not looping
+	if loopSet[package][version] then
+		return
+	end
+	loopSet[package][version] = true
+	
+	if not packages[package] then
+		error("Searching for dependencies of non-existant package " .. package)
+	end
+	
+	-- Add on dependencies first
+	if packages[package].dependencies then
+		for _, dependency in ipairs(packages[package].dependencies) do
+			dependenciesList(dependency[1], dependency[2], currentList, currentSet)
+		end
+	end
+	
+	-- Then make sure that this is on the list
+	if not currentSet[package][version] then
+		currentSet[package][version] = true
+		table.insert(currentList, {package, version})
+	end
+	
+	return currentList
+end
+
+-- Given an existing package and version will download and extract files, installing the package
+-- Doesn't download or extract anything if a meta package is given
+local function installPackage(package, version)
+	local versionedPackage = package .. "-" .. version
+	
+	if packages[package].type ~= "meta" then
+		-- Download the package .tar.gz
+		local packageTar = versionedPackage .. ".tar.gz"
+		local downloadUrl = baseUrl .. "/packages/" .. packageTar
+		local downloadedFile = installDir .. "/downloaded/" .. packageTar
+		print("Downloading | " .. versionedPackage)
+		if not os.execute("curl --progress-bar " .. downloadUrl .. " > " .. downloadedFile) then
+			error("Failed to download package " .. versionedPackage)
+		end
+		
+		-- Now extract the .tar.gz
+		print("Installing  | " .. versionedPackage)
+		if not os.execute("tar --extract --directory=" .. installDir .. " --file=" .. downloadedFile) then
+			error("Failed to install package " .. versionedPackage)
+		end
+	end
+	
+	-- And we should be done
+	print("-- Finished | " .. versionedPackage .. " --")
+end
+
+-- Require a package is installed (or reinstalled)
+-- mode is either "install" or "reinstall"
+local function requestPackage(mode, package, version)
+	-- In many places the package is referred to as "package-version"
+	local versionedPackage = package .. "-" .. version
+	
+	-- Set requested state
+	setRequested(package, version, true)
+	
+	-- Only doing something if reinstalling or not already installed
+	if mode == "reinstall" or not isInstalled(package, version) then
+		-- We do a protected call for the function dependenciesList()
+		local callSuccess, dependencies = pcall(dependenciesList, package, version)
+		-- If dependenciesList fails then we got the result false, error_message
+		if not callSuccess then
+			print(dependencies)
+			print("FAILED to install " .. package)
+			return
+		end
+		-- Install all dependencies and then the package
+		for _, dependency in ipairs(dependencies) do
+			if not packages[dependency[1]] then
+				error("Dependency " .. dependency[1] .. " of package " .. package .. " does not exist")
+			end
+			if not isInstalled(dependency[1], dependency[2]) or mode == "reinstall" then
+				installPackage(dependency[1], dependency[2])
+			end
+		end
+	end
+end
+
+-- Lists installed packages "in no particular order"
+local function listInstalledPackages()
+	local packagesList = {}
+	
+	for dirEntry in lfs.dir(installDir) do
+		if isMode(installDir .. "/" .. dirEntry, "directory") then
+			local package, version = splitVersionedName(dirEntry)
+			if package then
+				table.insert(packagesList, {package, version})
+			end
+		end
+	end
+	
+	return packagesList
+end
+
+-- Implementation of the getsymlinks mode: mirrors appropriate directories
+local function generateSymlinks(versionedPackage)
+	-- Confirm directory exists
+	if not isMode(installDir .. "/" .. versionedPackage) then
+		error("Can't access directory " .. installDir .. "/" .. versionedPackage)
+	end
+	
+	-- Symlink appropriate sections
+	if isMode(installDir .. "/" .. versionedPackage .. "/bin", "directory") then
+		symlinkMirror(installDir .. "/bin", installDir .. "/" .. versionedPackage .. "/bin")
+	end
+	-- FIXME breaks manpages bookkeeping file
+	if isMode(installDir .. "/" .. versionedPackage .. "/share", "directory") then
+		symlinkMirror(installDir .. "/share", installDir .. "/" .. versionedPackage .. "/share")
+	end
+	if isMode(installDir .. "/" .. versionedPackage .. "/include", "directory") then
+		symlinkMirror(installDir .. "/include", installDir .. "/" .. versionedPackage .. "/include")
+	end
+	if isMode(installDir .. "/" .. versionedPackage .. "/lib", "directory") then
+		symlinkMirror(installDir .. "/lib64", installDir .. "/" .. versionedPackage .. "/lib")
+	end
+	if isMode(installDir .. "/" .. versionedPackage .. "/lib64", "directory") then
+		symlinkMirror(installDir .. "/lib64", installDir .. "/" .. versionedPackage .. "/lib64")
+	end
+	if isMode(installDir .. "/" .. versionedPackage .. "/lib32", "directory") then
+		symlinkMirror(installDir .. "/lib", installDir .. "/" .. versionedPackage .. "/lib32")
+	end
+	
+	print("Links generated for " .. versionedPackage)
+end
+
+-- Lists packages matching a list of search strings
+local function searchPackages(searchStrings)
+	local results = {}
+	
+	-- Check for matches from all packages
+	for package, _ in pairs(packages) do
+		-- Search for matches in the long description of the package
+		local packageDesc = getPackageDescription(package)
+		local failed = false
+		-- Ensure all search strings match
+		for _, searchString in ipairs(searchStrings) do
+			if not failed then
+				failed = not package:find(searchString)
+			end
+		end
+		-- If all strings matched, add to results
+		if not failed then
+			table.insert(results, package)
+		end
+	end
+	
+	return results
+end
+
+-- Returns string of formatted info about a package
+local function getPackageDescription(package)
+	-- Build string of versions
+	local versionString = packages[package].version[1] .. " (default)"
+	for i = 2, #packages[package].version do
+		versionString = versionString .. ", " .. packages[package].version[i]
+	end
+	
+	-- Return string with name, description, and versions
+	return package .. " - " .. packages[package].description .. " - Versions: " .. versionString
+end
+
+-- Returns list of all package names
+local function listPackages()
+	local packageDesc = {}
+	for package, _ in pairs(packages) do
+		table.insert(packageDesc, package)
+	end
+	return packageDesc
+end
+
+-----------------------------
+-- Main program starts here
+-----------------------------
+
+-- Initialise packages with info from packages.json file
+do
+	local packagesFile = io.input(installDir .. "/packages.json")
+	local packagesJson = packagesFile:read("*all")
+	packages = json.decode(packagesJson)
+end
+
+-- First command-line argument is used as the mode
+local mode = arg[1]
+
+-- Swap short mode strings out
+do
+	local shortModeSwitch = {
+		i = "install",
+		s = "search",
+		r = "reinstall",
+		g = "gensymlinks",
+		p = "package",
+		u = "upload",
+		l = "list",
+		li = "list-installed",
+		c = "clean"
+	}
+	if shortModeSwitch[mode] then
+		mode = shortModeSwitch[mode]
+	end
+end
+
+-- If install or reinstall, we send all package names given to installPackage
+if mode == "install" or mode == "reinstall" then
+	-- Further arguments are packages to install
+	local givenPackages = {}
+	while arg[2] do
+		table.insert(givenPackages, table.remove(arg, 2))
+	end
+	
+	-- Try to install each given package
+	for _, package in ipairs(givenPackages) do
+		if not packages[package] then
+			error("Package " .. package .. " not recognised")
+		end
+		requestPackage(mode, package, packages[package].version[1])
+	end
+	
+-- Simply lists all the currently installed packages
+elseif mode == "list-installed" then
+	local installed = listInstalledPackages()
+	local installedNames = {}
+	
+	for _, packageEntry in ipairs(installed) do
+		local outString = packageEntry[1] .. "-" .. packageEntry[2]
+		if isRequested(packageEntry[1], packageEntry[2]) then
+			outString = outString .. " (manual)"
+		end
+		table.insert(installedNames, outString)
+	end
+	
+	table.sort(installedNames)
+	for _, name in ipairs(installedNames) do
+		print(name)
+	end
+	
+-- Lists all packages
+elseif mode == "list" then
+	-- Get all package names
+	local allPackages = listPackages()
+	
+	-- Sort package names, and then print with full descriptions
+	table.sort(allPackages)
+	for _, package in ipairs(allPackages) do
+		print(getPackageDescription(package))
+	end
+	
+-- Lets you search for a pattern in the package names
+elseif mode == "search" then
+	-- TODO: allow && pattern matching with extra arguments
+	
+	-- The rest of the arguments are search strings
+	local searchStrings = {}
+	while arg[2] do
+		table.insert(givenPackages, table.remove(arg, 2))
+	end
+	
+	-- Get list of packages that match all search strings
+	local results = searchPackages(searchStrings)
+	
+	-- Sort and print results
+	table.sort(results)
+	for _, result in ipairs(results) do
+		print(getPackageDescription(result))
+	end
+	
+elseif mode == "uninstall" then
+	error("Not implemented")
+
+elseif mode == "gensymlinks" then
+	-- Takes ONE versioned package
+	if #arg ~= 2 then
+		error("Expected one extra argument for gensymlinks")
+	end
+	local versionedPackage = arg[2]
+	
+	generateSymlinks(versionedPackage)
+	
+elseif mode == "package" or mode == "upload" then
+	error("Not implemented")
+
+elseif mode == "update" then
+	local downloadUrl = baseUrl .. "/packages.json"
+	local downloadedFile = installDir .. "/packages.json"
+	if not os.execute("curl --silent " .. downloadUrl .. " > " .. downloadedFile) then
+		error("Failed to download packages.json")
+	end
+
+elseif mode == "clean" then
+	os.execute(installDir .. "/cleanup")
+
+-- Display help message
+elseif mode == "help" or mode == "--help" or mode == "-h" then
+	print(helpMessage)
+
+else
+	print("dcs-get: unrecognised mode, try --help / help")
+end

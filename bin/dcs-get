@@ -327,30 +327,6 @@ local function generateSymlinks(versionedPackage)
 	print("Links generated for " .. versionedPackage)
 end
 
--- Lists packages matching a list of search strings
-local function searchPackages(searchStrings)
-	local results = {}
-	
-	-- Check for matches from all packages
-	for package, _ in pairs(packages) do
-		-- Search for matches in the long description of the package
-		local packageDesc = getPackageDescription(package)
-		local failed = false
-		-- Ensure all search strings match
-		for _, searchString in ipairs(searchStrings) do
-			if not failed then
-				failed = not package:find(searchString)
-			end
-		end
-		-- If all strings matched, add to results
-		if not failed then
-			table.insert(results, package)
-		end
-	end
-	
-	return results
-end
-
 -- Returns string of formatted info about a package
 local function getPackageDescription(package)
 	-- Build string of versions
@@ -361,6 +337,30 @@ local function getPackageDescription(package)
 	
 	-- Return string with name, description, and versions
 	return package .. " - " .. packages[package].description .. " - Versions: " .. versionString
+end
+
+-- Lists packages matching a list of search strings
+local function searchPackages(searchStrings)
+	local results = {}
+	
+	-- Check for matches from all packages
+	for package, _ in pairs(packages) do
+		-- Search for matches in the long description of the package
+		local packageDesc = getPackageDescription(package):lower()
+		local failed = false
+		-- Ensure all search strings match
+		for _, searchString in ipairs(searchStrings) do
+			if not failed then
+				failed = not packageDesc:find(searchString:lower())
+			end
+		end
+		-- If all strings matched, add to results
+		if not failed then
+			table.insert(results, package)
+		end
+	end
+	
+	return results
 end
 
 -- Returns list of all package names
@@ -451,12 +451,14 @@ elseif mode == "list" then
 	
 -- Lets you search for a pattern in the package names
 elseif mode == "search" then
-	-- TODO: allow && pattern matching with extra arguments
-	
 	-- The rest of the arguments are search strings
 	local searchStrings = {}
 	while arg[2] do
-		table.insert(givenPackages, table.remove(arg, 2))
+		table.insert(searchStrings, table.remove(arg, 2))
+	end
+	
+	if #searchStrings == 0 then
+		error("Expected more parameters to use as search strings")
 	end
 	
 	-- Get list of packages that match all search strings

@@ -36,3 +36,9 @@ Here are some honest disadvantages of this implementation:
 * Not piping the download to tar extract means that downloading and installing is 'slower'
 * The code is longer and when it is finished would require a basic understanding of 'classes' to make easy sense, although anyone should be able to read Lua
 * This implementation requires some packages to be immediately installed in dcs-get-install to get this executable working... however these packages are tiny and fast to install should we ever make this the default implementation
+
+Todo
+----
+
+* Implement package and upload modes
+* Write guide on building lua, luarocks and "Lua dcs-get" as a package

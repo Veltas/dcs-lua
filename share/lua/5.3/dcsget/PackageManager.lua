@@ -2,6 +2,7 @@ local json = require("dkjson")
 local lfs = require("lfs")
 
 -- Try{someFunction}(arg1, arg2) is equivalent to pcall(someFunction, arg1, arg2)
+-- FIXME Try is broken
 local Try = {}
 do
 	local TryMt = {}
@@ -412,6 +413,8 @@ function PackageManager.new(installDir, baseUrl)
 		-- Only doing something if reinstalling or not already installed
 		if mode == "reinstall" or not isInstalled(package, version) then
 			-- Get list of dependencies
+			-- Okay actually fix me this time
+			--[[
 			local success, dependencies = Try{dependenciesList}(package, version)
 			if not success then
 				local errorMessage = dependencies
@@ -419,6 +422,8 @@ function PackageManager.new(installDir, baseUrl)
 				print("FAILED to install " .. package)
 				return
 			end
+			--]]
+			local dependencies = dependenciesList(package, version)
 			
 			-- Install all dependencies and then the package
 			for _, dependency in ipairs(dependencies) do

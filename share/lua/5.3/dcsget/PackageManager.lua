@@ -412,8 +412,6 @@ function PackageManager.new(installDir, baseUrl)
 		-- Only doing something if reinstalling or not already installed
 		if mode == "reinstall" or not isInstalled(package, version) then
 			-- Get list of dependencies
-			-- FIXME
-			--[[
 			local success, dependencies = Try{dependenciesList}(package, version)
 			if not success then
 				local errorMessage = dependencies
@@ -421,8 +419,6 @@ function PackageManager.new(installDir, baseUrl)
 				print("FAILED to install " .. package)
 				return
 			end
-			--]]
-			local dependencies = dependenciesList(package, version)
 			
 			-- Install all dependencies and then the package
 			for _, dependency in ipairs(dependencies) do

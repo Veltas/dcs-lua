@@ -15,7 +15,7 @@ I'm putting releases of it on dcs-get for testing. You can try it out if you hav
 
     $ dcs-get install dcs-lua
 
-This will overwrite your installation with dcs-lua. Now when you install packages they're marked as manually installed, your pre-existing packages are still there and should remain installed correctly. If you find bugs please [report them in the issue tracker](https://github.com/Veltas/dcs-lua/issues).
+This will overwrite your session with dcs-lua. Now when you install packages they're marked as manually installed, your pre-existing packages are still there and should remain installed correctly. If you find bugs please [report them in the issue tracker](https://github.com/Veltas/dcs-lua/issues).
 
 When installed this version of the executable is used mostly the same way as the old one, check status section above for missing features. The following will give you a list of commands:
 

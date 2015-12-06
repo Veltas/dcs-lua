@@ -133,7 +133,7 @@ elseif mode == "search" then
 	local results = packageManager.listMatched(searchStrings)
 	
 	-- Sort and print results
-	table.sort(results, lowerCaseCompare)
+	table.sort(results, caseInsensitiveCompare)
 	for _, result in ipairs(results) do
 		print(packageManager.longDescription(result))
 	end

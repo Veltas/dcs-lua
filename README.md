@@ -70,8 +70,3 @@ Here are some honest disadvantages of this implementation:
 * The download bar is not as [jizzy](https://github.com/UWCS/dcs-get/blob/master/dcs-get#L151)
 * The code is longer, and in some ways more complicated, although overall hopefully easier to read
 * This implementation requires some packages to be immediately installed in dcs-get-install to get this executable working... however these packages are tiny and fast to install should we ever make this the default implementation
-
-##Todo
-
-* Implement package, upload, and uninstall modes
-* Write guide on building lua, luarocks and "Lua dcs-get" as a package

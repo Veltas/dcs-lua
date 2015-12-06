@@ -61,7 +61,7 @@ Here are some honest advantages of this implementation:
 * Generate symlinks uses better directories, and uses share
 * Records whether packages are installed manually or automatically as a dependency
 * Should have an uninstall feature eventually -- this is a little superflous
-* It more robust in many other ways
+* Is more robust in many other ways
 * Will be easy to try out on any dcs-get installation as I'm adding a package for it
 
 Here are some honest disadvantages of this implementation:

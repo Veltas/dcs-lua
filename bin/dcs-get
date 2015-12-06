@@ -45,7 +45,7 @@ Advanced modes:
 	package - Creates .tar.gz from package_directory_name and its symlinks in ]] .. installDir .. [[/downloaded
 	upload - Uploads package_directory_name.tar.gz from downloaded directory to the server
 
-For support please mail techteam@uwcs.co.uk
+For support with this executable please raise an issue at https://github.com/Veltas/dcs-lua/issues
 ]] .. baseUrl .. [[
 
 ]]

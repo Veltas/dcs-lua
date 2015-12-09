@@ -19,33 +19,44 @@ Usage:
 	dcs-get clean
 	dcs-get {gensymlinks|package|upload} package_directory_name
 	dcs-get update
-	dcs-get {help|--help|-h}
+	dcs-get {help|--help|-h|longhelp}
+]]
 
+local extendedMessage = [[
 Mode names can be shortened to the following:
 	i: install, r: reinstall, s: search, l:list, li: list-installed,
 	c: clean, g: gensymlinks, p: package, u: upload
 
 Modes:
 	install
-		Installs given packages if not already installed, and their dependencies
+		Installs given packages if not already installed, and
+		their dependencies
 	reinstall
-		Clears installation folders and reinstalls packages, and dependencies
+		Clears installation folders and reinstalls packages,
+		and dependencies
 	list
 		Lists info for all packages
 	list-installed
 		Lists installed package names
 	search
-		Lists info for packages with names matching search_string
+		Lists info for packages with names matching
+		search_string
 
 Advanced modes:
 	update - Re-downloads packages.json
 	uninstall - Deletes all the files associated with a package
 	clean - Removes all your dcs-get installation files and packages
-	gensymlinks - Mirrors relevant files from ]] .. installDir .. [[/package_directory_name in bin, lib, etc.
-	package - Creates .tar.gz from package_directory_name and its symlinks in ]] .. installDir .. [[/downloaded
-	upload - Uploads package_directory_name.tar.gz from downloaded directory to the server
+	gensymlinks - Mirrors relevant files from 
+	              ]] .. installDir .. [[/package_directory_name
+	              in bin, lib, etc.
+	package - Creates .tar.gz from package_directory_name and its
+	          symlinks in ]] .. installDir .. [[/downloaded
+	upload - Uploads package_directory_name.tar.gz from downloaded
+	         directory to the server
 
-For support with this executable please raise an issue at https://github.com/Veltas/dcs-lua/issues
+For support with this executable please raise an issue at
+https://github.com/Veltas/dcs-lua/issues
+
 ]] .. baseUrl .. [[
 
 ]]
@@ -162,6 +173,11 @@ elseif mode == "clean" then
 -- Display help message
 elseif mode == "help" or mode == "--help" or mode == "-h" then
 	print(helpMessage)
+	print("Use dcs-get longhelp for more details\n")
+
+elseif mode == "longhelp" then
+	print(helpMessage)
+	print(extendedMessage)
 
 else
 	print("dcs-get: unrecognised mode, try --help / help")

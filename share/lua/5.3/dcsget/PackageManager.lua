@@ -264,7 +264,7 @@ function PackageManager.new(installDir, baseUrl)
 	-- Iterates over installed packages
 	-- Returned iterator gives package then version
 	function packageManager.installed()
-		local directoryIterator, state, currentEntry = lfs.dir(installDir)
+		local directoryIterator, state, _ = lfs.dir(installDir)
 		
 		local function iterator(state, entry)
 			local dirEntry

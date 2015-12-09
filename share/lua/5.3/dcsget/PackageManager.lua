@@ -13,10 +13,11 @@ do
 		local protectedMt = {}
 		setmetatable(protected, protectedMt)
 		
-		local functionToCall = arg[1][1]
+		local sugarTable = ...
+		local functionToCall = sugarTable[1]
 		
 		function protectedMt.__call(_, ...)
-			return pcall(functionToCall, table.unpack(arg))
+			return pcall(functionToCall, ...)
 		end
 		
 		return protected
@@ -427,7 +428,8 @@ function PackageManager.new(installDir, baseUrl)
 			
 			-- Install all dependencies and then the package
 			for _, dependency in ipairs(dependencies) do
-				local dependencyName, dependencyVersion = table.unpack(dependency)
+				local dependencyName = dependency[1]
+				local dependencyVersion = dependency[2]
 				if not packageManager.isPackage(dependencyName) then
 					error("Dependency " .. dependencyName .. " of package " .. package .. " does not exist")
 				end

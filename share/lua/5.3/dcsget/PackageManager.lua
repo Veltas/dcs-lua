@@ -404,9 +404,6 @@ function PackageManager.new(installDir, baseUrl)
 	-- Require a package is installed (or reinstalled)
 	-- mode is either "install" or "reinstall"
 	function packageManager.request(mode, package, version)
-		-- In many places the package is referred to as "package-version"
-		local versionedPackage = package .. "-" .. version
-		
 		-- Set requested state
 		setRequested(package, version, true)
 		

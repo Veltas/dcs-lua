@@ -5,12 +5,10 @@ local lfs = require("lfs")
 local Try = {}
 do
 	local TryMt = {}
-	setmetatable(Try, TryMt)
 	
 	function TryMt.__call(_, ...)
 		local protected = {}
 		local protectedMt = {}
-		setmetatable(protected, protectedMt)
 		
 		local sugarTable = ...
 		local functionToCall = sugarTable[1]
@@ -19,8 +17,12 @@ do
 			return pcall(functionToCall, ...)
 		end
 		
+		setmetatable(protected, protectedMt)
+		
 		return protected
 	end
+	
+	setmetatable(Try, TryMt)
 end
 
 -- Return file/dir mode "file", "directory", etc. (follows symlinks)

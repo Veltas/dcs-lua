@@ -224,7 +224,7 @@ function PackageManager.new(installDir, baseUrl)
 				requestedFile:close()
 				
 				-- Write ammended list
-				local requestedFile = io.output(installDir .. "/requested")
+				requestedFile = io.output(installDir .. "/requested")
 				for _, line in ipairs(requestedFile) do
 					requestedFile:write(line .. "\n")
 				end

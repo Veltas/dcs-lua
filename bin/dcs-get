@@ -10,7 +10,7 @@ local installDir = "/var/tmp/dcs-get"
 local baseUrl = "http://backus.uwcs.co.uk/dcs-get"
 
 local helpMessage = [[
-dcs-get - Warwick Compsoc Unprivileged Package Manager
+dcs-get - Warwick CompSoc unprivileged package manager
 
 Usage:
 	dcs-get {install|reinstall} package_name ...

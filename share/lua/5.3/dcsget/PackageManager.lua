@@ -80,7 +80,7 @@ function PackageData.new(installDir)
 	local packageData = {}
 	
 	-- The loaded structure containing the JSON file's data
-	local loadedPackages = {}
+	local loadedPackages
 	do
 		local packagesFile = io.input(installDir .. "/packages.json")
 		local packagesJson = packagesFile:read("*all")

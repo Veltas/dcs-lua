@@ -92,12 +92,12 @@ function PackageData.new(installDir)
 	
 	-- Generic-for iterator for package names
 	function packageData.names()
-		local loadedIterator, state, currentName = pairs(loadedPackages)
+		local pairsIterator, pairsState, pairsValue = pairs(loadedPackages)
 		local function iterator(state, currentName)
-			local newName, _ = loadedIterator(state, currentName)
+			local newName, _ = pairsIterator(state, currentName)
 			return newName
 		end
-		return iterator, state, currentName
+		return iterator, pairsState, pairsValue
 	end
 	
 	-- Returns whether a package name refers to an actual package or not

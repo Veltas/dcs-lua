@@ -41,6 +41,10 @@ If the `dcs-get clean` command is completely failing, you can invoke the cleanup
 
     $ /var/tmp/dcs-get/cleanup
 
+If you own the directory and the cleanup script fails, or if you prefer, remove the dcs-get directory yourself:
+
+    $ rm -rf /var/tmp/dcs-get
+
 ##Reasoning
 
 Some honest advantages of this implementation:

@@ -71,7 +71,7 @@ local mainSuccess, mainErrorMessage = pcall(function ()
 	local mode = arg[1]
 
 	-- Swap short mode strings out
-	local shortModeSwitch = {
+	local shortModeMap = {
 		i = "install",
 		s = "search",
 		r = "reinstall",
@@ -82,7 +82,7 @@ local mainSuccess, mainErrorMessage = pcall(function ()
 		li = "list-installed",
 		c = "clean"
 	}
-	mode = shortModeSwitch[mode] or mode
+	mode = shortModeMap[mode] or mode
 
 	-- Installs/reinstalls a list of packages
 	if mode == "install" or mode == "reinstall" then

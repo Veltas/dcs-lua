@@ -37,24 +37,13 @@ If something goes wrong or if you prefer, you can run the cleanup script. In bas
     $ dcs-get clean
     $ _dcs-get
 
-If the dcs-get command is completely failing, you can invoke the cleanup script manually:
+If the `dcs-get clean` command is completely failing, you can invoke the cleanup script manually:
 
     $ /var/tmp/dcs-get/cleanup
 
 ##Reasoning
 
-I started with the idea "hey, I reckon I could rewrite dcs-get's main executable":
-
-* In a language that isn't PHP
-* Shorter and sweeter (a lot of clutter in original dcs-get)
-* In a way that is easier for future compsoc to maintain and extend
-
-While working on it I realised that the original dcs-get is not very robust, and is broken in a lot
-of ways that legitimately cause people trouble.
-
-This implementation failed my original goal of writing a shorter program, but I think it is still better overall.
-
-Here are some honest advantages of this implementation:
+Some honest advantages of this implementation:
 
 * Installs do download and writing separately (like all real package managers ever)
 * The reinstall feature is superior to reinstall and deep-reinstall from old dcs-get
@@ -64,7 +53,7 @@ Here are some honest advantages of this implementation:
 * Is more robust in many other ways
 * Will be easy to try out on any dcs-get installation as I'm adding a package for it
 
-Here are some honest disadvantages of this implementation:
+Some honest disadvantages of this implementation:
 
 * Not piping the download to tar extract means that downloading and installing is slower
 * The download bar is not as [jizzy](https://github.com/UWCS/dcs-get/blob/master/dcs-get#L151)

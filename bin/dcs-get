@@ -1,5 +1,8 @@
 #!/usr/bin/env lua
 
+package.path = package.path .. ";/var/tmp/dcs-get/dcslib/?.lua"
+package.path = package.path .. ";/var/tmp/dcs-get/dcslib/?/init.lua"
+
 local PackageManager = require("dcsget.PackageManager")
 
 local function caseInsensitiveCompare(str1, str2)
@@ -15,7 +18,7 @@ dcs-get - Warwick CompSoc unprivileged package manager
 Usage:
 	dcs-get {install|reinstall} package_name ...
 	dcs-get {list|list-installed}
-	dcs-get search "search_string"
+	dcs-get search "search_string" ...
 	dcs-get clean
 	dcs-get {gensymlinks|package|upload} package_directory_name
 	dcs-get update
@@ -40,13 +43,13 @@ Modes:
 		Lists installed package names
 	search
 		Lists info for packages with names matching
-		search_string
+		all given search strings
 
 Advanced modes:
 	update - Re-downloads packages.json
 	uninstall - Deletes all the files associated with a package
 	clean - Removes all your dcs-get installation files and packages
-	gensymlinks - Mirrors relevant files from 
+	gensymlinks - Mirrors relevant files from
 	              ]] .. installDir .. [[/package_directory_name
 	              in bin, lib, etc.
 	package - Creates .tar.gz from package_directory_name and its
@@ -61,125 +64,139 @@ https://github.com/Veltas/dcs-lua/issues
 
 ]]
 
-local packageManager = PackageManager.new(installDir, baseUrl)
+local mainSuccess, mainErrorMessage = pcall(function ()
+	local packageManager = PackageManager.new(installDir, baseUrl)
 
--- First command-line argument is used as the mode
-local mode = arg[1]
+	-- First command-line argument is used as the mode
+	local mode = arg[1]
 
--- Swap short mode strings out
-local shortModeSwitch = {
-	["i"] = "install",
-	["s"] = "search",
-	["r"] = "reinstall",
-	["g"] = "gensymlinks",
-	["p"] = "package",
-	["u"] = "upload",
-	["l"] = "list",
-	["li"] = "list-installed",
-	["c"] = "clean"
-}
-if shortModeSwitch[mode] then
-	mode = shortModeSwitch[mode]
-end
+	-- Swap short mode strings out
+	local shortModeSwitch = {
+		i = "install",
+		s = "search",
+		r = "reinstall",
+		g = "gensymlinks",
+		p = "package",
+		u = "upload",
+		l = "list",
+		li = "list-installed",
+		c = "clean"
+	}
+	mode = shortModeSwitch[mode] or mode
 
-if mode == "install" or mode == "reinstall" then
-	-- Further arguments are packages to install
-	local givenPackages = {}
-	while arg[2] do
-		table.insert(givenPackages, table.remove(arg, 2))
-	end
-	
-	-- Try to install each given package
-	for _, package in ipairs(givenPackages) do
-		if not packageManager.isPackage(package) then
-			error("Package " .. package .. " not recognised")
+	-- Installs/reinstalls a list of packages
+	if mode == "install" or mode == "reinstall" then
+
+		-- Further arguments are packages to install
+		table.remove(arg, 1)
+		local givenPackages = arg
+
+		-- Try to install each given package
+		for _, package in ipairs(givenPackages) do
+			if not packageManager.isPackage(package) then
+				error("Package " .. package .. " not recognised")
+			end
+			packageManager.request(mode, package, packageManager.versions(package)())
 		end
-		packageManager.request(mode, package, packageManager.versions(package)())
-	end
-	
--- Simply lists all the currently installed packages
-elseif mode == "list-installed" then
-	local installedNames = {}
-	
-	for entryName, entryVersion in packageManager.installed() do
-		local outString = entryName .. "-" .. entryVersion
-		if packageManager.isRequested(entryName, entryVersion) then
-			outString = outString .. " (manual)"
+
+	-- Simply lists all the currently installed packages
+	elseif mode == "list-installed" then
+
+		-- List nicely formatted names of installed packages
+		local installedNames = {}
+		for entryName, entryVersion in packageManager.installed() do
+			local outString = entryName .. "-" .. entryVersion
+			if packageManager.isRequested(entryName, entryVersion) then
+				outString = outString .. " (manual)"
+			end
+			table.insert(installedNames, outString)
 		end
-		table.insert(installedNames, outString)
-	end
-	
-	table.sort(installedNames, caseInsensitiveCompare)
-	for _, name in ipairs(installedNames) do
-		print(name)
-	end
-	
--- Lists all packages
-elseif mode == "list" then
-	-- Get and sort all package names
-	local allPackages = {}
-	for package in packageManager.names() do
-		table.insert(allPackages, package)
-	end
-	table.sort(allPackages, caseInsensitiveCompare)
-	
-	-- Print full descriptions of all packages
-	for _, package in ipairs(allPackages) do
-		print(packageManager.longDescription(package))
-	end
-	
--- Lets you search for a pattern in the package names
-elseif mode == "search" then
-	-- The rest of the arguments are search strings
-	local searchStrings = {}
-	while arg[2] do
-		table.insert(searchStrings, table.remove(arg, 2))
-	end
-	
-	if #searchStrings == 0 then
-		error("Expected more parameters to use as search strings")
-	end
-	
-	-- Get list of packages that match all search strings
-	local results = packageManager.listMatched(searchStrings)
-	
-	-- Sort and print results
-	table.sort(results, caseInsensitiveCompare)
-	for _, result in ipairs(results) do
-		print(packageManager.longDescription(result))
-	end
-	
-elseif mode == "uninstall" then
-	error("Not implemented")
+		table.sort(installedNames, caseInsensitiveCompare)
 
-elseif mode == "gensymlinks" then
-	-- Takes ONE versioned package
-	if #arg ~= 2 then
-		error("Expected one extra argument for gensymlinks")
+		for _, name in ipairs(installedNames) do
+			print(name)
+		end
+
+	-- Lists all packages
+	elseif mode == "list" then
+
+		-- Get and sort all package names
+		local allPackages = {}
+		for package in packageManager.names() do
+			table.insert(allPackages, package)
+		end
+		table.sort(allPackages, caseInsensitiveCompare)
+
+		-- Print full descriptions of all packages
+		for _, package in ipairs(allPackages) do
+			print(packageManager.longDescription(package))
+		end
+
+	-- Lets you search for a pattern in the package names
+	elseif mode == "search" then
+
+		-- The rest of the arguments are search strings
+		table.remove(arg, 1)
+		local searchStrings = arg
+
+		if #searchStrings == 0 then
+			error("Expected more parameters to use as search strings")
+		end
+
+		-- Get list of packages that match all search strings
+		local results = packageManager.listMatched(searchStrings)
+
+		-- Sort and print results
+		table.sort(results, caseInsensitiveCompare)
+		for _, result in ipairs(results) do
+			print(packageManager.longDescription(result))
+		end
+
+	elseif mode == "uninstall" then
+
+		error("Not implemented")
+
+	elseif mode == "gensymlinks" then
+
+		-- Takes ONE versioned package
+		if #arg ~= 2 then
+			error("Expected one extra argument for gensymlinks")
+		end
+		local versionedPackage = arg[2]
+
+		packageManager.generateSymlinks(versionedPackage)
+
+	elseif mode == "package" or mode == "upload" then
+
+		error("Not implemented")
+
+	elseif mode == "update" then
+
+		packageManager.update()
+
+	elseif mode == "clean" then
+
+		packageManager.clean()
+
+	-- Display help message
+	elseif mode == "help" or mode == "--help" or mode == "-h" then
+
+		print(helpMessage)
+		print("Use dcs-get longhelp for more details\n")
+
+	elseif mode == "longhelp" then
+
+		print(helpMessage)
+		print(extendedMessage)
+
+	else
+
+		error("Unrecognised mode, try --help / help")
+
 	end
-	local versionedPackage = arg[2]
-	
-	packageManager.generateSymlinks(versionedPackage)
-	
-elseif mode == "package" or mode == "upload" then
-	error("Not implemented")
+end)
 
-elseif mode == "update" then
-	packageManager.update()
-
-elseif mode == "clean" then
-	packageManager.clean()
-
--- Display help message
-elseif mode == "help" or mode == "--help" or mode == "-h" then
-	print(helpMessage)
-	print("Use dcs-get longhelp for more details\n")
-
-elseif mode == "longhelp" then
-	print(helpMessage)
-	print(extendedMessage)
-
-else
-	print("dcs-get: unrecognised mode, try --help / help")
-	
+if not mainSuccess then
+	io.stderr:write(mainErrorMessage .. "\n")
+	os.exit(false)
 end

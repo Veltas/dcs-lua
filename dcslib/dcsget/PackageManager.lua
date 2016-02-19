@@ -1,5 +1,5 @@
-local json = require("dkjson")
-local lfs = require("lfs")
+local json = require "dkjson"
+local lfs = require "lfs"
 
 -- Return file/dir mode "file", "directory", etc. (follows symlinks)
 -- Returns nil on access error (file not exist, no permission, ...)

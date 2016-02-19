@@ -3,7 +3,7 @@
 package.path = package.path .. ";/var/tmp/dcs-get/dcslib/?.lua"
 package.path = package.path .. ";/var/tmp/dcs-get/dcslib/?/init.lua"
 
-local PackageManager = require("dcsget.PackageManager")
+local PackageManager = require "dcsget.PackageManager"
 
 local function caseInsensitiveCompare(str1, str2)
 	return str1:lower() < str2:lower()
@@ -87,7 +87,6 @@ local mainSuccess, mainErrorMessage = pcall(function ()
 	-- Installs/reinstalls a list of packages
 	if mode == "install" or mode == "reinstall" then
 
-		-- Further arguments are packages to install
 		table.remove(arg, 1)
 		local givenPackages = arg
 

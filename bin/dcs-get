@@ -199,6 +199,6 @@ end,
 
 function (mainErrorMessage)
 	-- If we catch an exception, write error and exit with failure status
-	io.stderr:write(mainErrorMessage:gsub("^.+/(.-:.-: )", "%1", 1) .. "\n")
+	io.stderr:write(mainErrorMessage:gsub("^.*/(.-:.-: )", "%1", 1) .. "\n")
 	os.exit(false)
 end)

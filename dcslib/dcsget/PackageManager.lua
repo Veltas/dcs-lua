@@ -205,14 +205,12 @@ function PackageManager.new(installDir, baseUrl)
 			end
 
 		-- Not already requested
-		else
-			if newRequestedState then
-				-- Write package to end of file
-				os.execute("touch " .. installDir .. "/requested")
-				local requestedFile = io.open(installDir .. "/requested", "a")
-				requestedFile:write(package .. "-" .. version .. "\n")
-				requestedFile:close()
-			end
+		elseif newRequestedState then
+			-- Write package to end of file
+			os.execute("touch " .. installDir .. "/requested")
+			local requestedFile = io.open(installDir .. "/requested", "a")
+			requestedFile:write(package .. "-" .. version .. "\n")
+			requestedFile:close()
 		end
 	end
 

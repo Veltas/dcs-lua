@@ -1,70 +1,71 @@
 #!/usr/bin/env lua
 
-package.path = package.path .. ";/var/tmp/dcs-get/dcslib/?.lua"
-package.path = package.path .. ";/var/tmp/dcs-get/dcslib/?/init.lua"
+xpcall(function ()
 
-local PackageManager = require "dcsget.PackageManager"
+	package.path = package.path .. ";/var/tmp/dcs-get/dcslib/?.lua"
+	package.path = package.path .. ";/var/tmp/dcs-get/dcslib/?/init.lua"
 
-local function caseInsensitiveCompare(str1, str2)
-	return str1:lower() < str2:lower()
-end
+	local PackageManager = require "dcsget.PackageManager"
 
-local installDir = "/var/tmp/dcs-get"
-local baseUrl = "http://backus.uwcs.co.uk/dcs-get"
+	local function caseInsensitiveCompare(str1, str2)
+		return str1:lower() < str2:lower()
+	end
 
-local helpMessage = [[
-dcs-get - Warwick CompSoc unprivileged package manager
+	local installDir = "/var/tmp/dcs-get"
+	local baseUrl = "http://backus.uwcs.co.uk/dcs-get"
 
-Usage:
-	dcs-get {install|reinstall} package_name ...
-	dcs-get {list|list-installed}
-	dcs-get search "search_string" ...
-	dcs-get clean
-	dcs-get {gensymlinks|package|upload} package_directory_name
-	dcs-get update
-	dcs-get {help|--help|-h|longhelp}
-]]
+	local helpMessage = [[
+	dcs-get - Warwick CompSoc unprivileged package manager
 
-local extendedMessage = [[
-Mode names can be shortened to the following:
-	i: install, r: reinstall, s: search, l:list, li: list-installed,
-	c: clean, g: gensymlinks, p: package, u: upload
+	Usage:
+		dcs-get {install|reinstall} package_name ...
+		dcs-get {list|list-installed}
+		dcs-get search "search_string" ...
+		dcs-get clean
+		dcs-get {gensymlinks|package|upload} package_directory_name
+		dcs-get update
+		dcs-get {help|--help|-h|longhelp}
+	]]
 
-Modes:
-	install
-		Installs given packages if not already installed, and
-		their dependencies
-	reinstall
-		Clears installation folders and reinstalls packages,
-		and dependencies
-	list
-		Lists info for all packages
-	list-installed
-		Lists installed package names
-	search
-		Lists info for packages with names matching
-		all given search strings
+	local extendedMessage = [[
+	Mode names can be shortened to the following:
+		i: install, r: reinstall, s: search, l:list, li: list-installed,
+		c: clean, g: gensymlinks, p: package, u: upload
 
-Advanced modes:
-	update - Re-downloads packages.json
-	uninstall - Deletes all the files associated with a package
-	clean - Removes all your dcs-get installation files and packages
-	gensymlinks - Mirrors relevant files from
-	              ]] .. installDir .. [[/package_directory_name
-	              in bin, lib, etc.
-	package - Creates .tar.gz from package_directory_name and its
-	          symlinks in ]] .. installDir .. [[/downloaded
-	upload - Uploads package_directory_name.tar.gz from downloaded
-	         directory to the server
+	Modes:
+		install
+			Installs given packages if not already installed, and
+			their dependencies
+		reinstall
+			Clears installation folders and reinstalls packages,
+			and dependencies
+		list
+			Lists info for all packages
+		list-installed
+			Lists installed package names
+		search
+			Lists info for packages with names matching
+			all given search strings
 
-For support with this executable please raise an issue at
-https://github.com/Veltas/dcs-lua/issues
+	Advanced modes:
+		update - Re-downloads packages.json
+		uninstall - Deletes all the files associated with a package
+		clean - Removes all your dcs-get installation files and packages
+		gensymlinks - Mirrors relevant files from
+									]] .. installDir .. [[/package_directory_name
+									in bin, lib, etc.
+		package - Creates .tar.gz from package_directory_name and its
+							symlinks in ]] .. installDir .. [[/downloaded
+		upload - Uploads package_directory_name.tar.gz from downloaded
+						 directory to the server
 
-]] .. baseUrl .. [[
+	For support with this executable please raise an issue at
+	https://github.com/Veltas/dcs-lua/issues
 
-]]
+	]] .. baseUrl .. [[
 
-local mainSuccess, mainErrorMessage = pcall(function ()
+	]]
+
 	local packageManager = PackageManager.new(installDir, baseUrl)
 
 	-- First command-line argument is used as the mode
@@ -193,9 +194,11 @@ local mainSuccess, mainErrorMessage = pcall(function ()
 		error("Unrecognised mode, try --help / help")
 
 	end
-end)
 
-if not mainSuccess then
-	io.stderr:write(mainErrorMessage .. "\n")
+end,
+
+function (mainErrorMessage)
+	-- If we catch an exception, write error and exit with failure status
+	io.stderr:write(mainErrorMessage:gsub("^.+/(.-:.-: )", "%1", 1) .. "\n")
 	os.exit(false)
-end
+end)

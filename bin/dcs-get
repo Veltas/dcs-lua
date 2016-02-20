@@ -52,12 +52,12 @@ xpcall(function ()
 		uninstall - Deletes all the files associated with a package
 		clean - Removes all your dcs-get installation files and packages
 		gensymlinks - Mirrors relevant files from
-									]] .. installDir .. [[/package_directory_name
-									in bin, lib, etc.
+		              ]] .. installDir .. [[/package_directory_name
+		              in bin, lib, etc.
 		package - Creates .tar.gz from package_directory_name and its
-							symlinks in ]] .. installDir .. [[/downloaded
+		          symlinks in ]] .. installDir .. [[/downloaded
 		upload - Uploads package_directory_name.tar.gz from downloaded
-						 directory to the server
+		         directory to the server
 
 	For support with this executable please raise an issue at
 	https://github.com/Veltas/dcs-lua/issues

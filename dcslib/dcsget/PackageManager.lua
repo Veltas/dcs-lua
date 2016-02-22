@@ -380,10 +380,6 @@ end
 -- Require a package is installed (or reinstalled)
 -- mode is either "install" or "reinstall"
 function PackageManager:request(mode, package, version)
-	-- Set requested state
-	self:setRequested(package, version, true)
-
-	-- Only doing something if reinstalling or not already installed
 	if mode == "reinstall" or not self:isInstalled(package, version) then
 		-- Get list of dependencies
 		local dependencies = self:dependenciesList(package, version)
@@ -400,6 +396,8 @@ function PackageManager:request(mode, package, version)
 			end
 		end
 	end
+
+	self:setRequested(package, version, true)
 end
 
 function PackageManager:update()

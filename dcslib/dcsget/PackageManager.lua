@@ -367,7 +367,7 @@ function PackageManager:install(package, version)
 
 		-- Now extract the .tar.gz
 		print("Installing  | " .. versionedPackage)
-		if not os.execute("tar --extract --directory=" .. self.installDir .. " --file=" .. downloadedFile) then
+		if not os.execute("tar --extract --directory=" .. self.installDir .. " --file=" .. downloadedFile .. " 2> /dev/null") then
 			error("Failed to install package " .. versionedPackage)
 		end
 	end

@@ -319,7 +319,7 @@ function PackageManager:generateSymlinks(versionedPackage)
 		local fromPath = self.installDir .. "/" .. versionedPackage .. "/" .. from
 		local toPath = self.installDir .. "/" .. to
 		if isMode(fromPath, "directory") then
-			self:symlinkMirror(toPath, fromPath)
+			symlinkMirror(toPath, fromPath)
 		end
 	end
 

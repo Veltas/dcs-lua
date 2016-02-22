@@ -8,13 +8,12 @@ function PackageData.new(installDir)
 	local packageData = dcsget.inherit(PackageData)
 
 	-- Prepare packageData.loadedPackages from packages.json
-	do
-		local packagesFile = io.input(installDir .. "/packages.json")
-		local packagesJson = packagesFile:read("*all")
-		packageData.loadedPackages = json.decode(packagesJson)
-		if not packageData.loadedPackages then
-			error("Failed to read json file from " .. installDir .. "/packages.json")
-		end
+	local packagesFile = io.input(installDir .. "/packages.json")
+	local packagesJson = packagesFile:read("*all")
+
+	packageData.loadedPackages = json.decode(packagesJson)
+	if not packageData.loadedPackages then
+		error("Failed to read json file from " .. installDir .. "/packages.json")
 	end
 
 	return packageData

@@ -330,41 +330,27 @@ function PackageManager:generateSymlinks(versionedPackage)
 end
 
 -- Gets a complete list of dependencies (root dependencies first)
--- First call does not need currentList, currentSet or loopSet arguments
-function PackageManager:dependenciesList(package, version, currentList, currentSet, loopSet)
-	-- currentList stores list of package dependencies in order of want
-	currentList = currentList or {}
-
-	-- currentSet stores the packages which are already on the list
-	currentSet = currentSet or {}
-	currentSet[package] = currentSet[package] or {}
-
-	-- loopSet stores the packages which have already been visited recursively
-	loopSet = loopSet or {}
-	loopSet[package] = loopSet[package] or {}
-
-	-- Make sure we're not looping
-	if loopSet[package][version] then
-		return
-	end
-	loopSet[package][version] = true
-
+-- First call does not need list or inList arguments
+function PackageManager:dependenciesList(package, version, list, inList)
 	if not self:isPackage(package) then
-		error("Searching for dependencies of non-existant package " .. package)
+		error("Dependency search reached non-existant package " .. package)
 	end
 
-	-- Add on dependencies first
-	for dependencyName, dependencyVersion in self:dependencies(package) do
-		self:dependenciesList(dependencyName, dependencyVersion, currentList, currentSet)
+	list = list or {}
+	inList = inList or {}
+	inList[package] = inList[package] or {}
+
+	if not inList[package][version] then
+		inList[package][version] = true
+
+		for dependencyName, dependencyVersion in self:dependencies(package) do
+			self:dependenciesList(dependencyName, dependencyVersion, list, inList)
+		end
+
+		table.insert(list, {package, version})
 	end
 
-	-- Then make sure that this is on the list
-	if not currentSet[package][version] then
-		currentSet[package][version] = true
-		table.insert(currentList, {package, version})
-	end
-
-	return currentList
+	return list
 end
 
 -- Given an existing package and version will download and extract files, installing the package
@@ -402,14 +388,7 @@ function PackageManager:request(mode, package, version)
 	-- Only doing something if reinstalling or not already installed
 	if mode == "reinstall" or not self:isInstalled(package, version) then
 		-- Get list of dependencies
-		local dependencies
-		xpcall(function ()
-			dependencies = self:dependenciesList(package, version)
-		end, function (errorMessage)
-			print(errorMessage)
-			print("FAILED to install " .. package)
-			return
-		end)
+		local dependencies = self:dependenciesList(package, version)
 
 		-- Install all dependencies and then the package
 		for _, dependency in ipairs(dependencies) do

@@ -246,30 +246,35 @@ function PackageManager:dependenciesList(package, version, list, inList)
 	return list
 end
 
--- Given an existing package and version will download and extract files, installing the package
--- Doesn't download or extract anything if a meta package is given
+-- Given an existing package and version will download files
+function PackageManager:download(package, version)
+	local versionedPackage = package .. "-" .. version
+
+	if self:type(package) ~= "meta" then
+		local packageTar = versionedPackage .. ".tar.gz"
+		local downloadUrl = self.baseUrl .. "/packages/" .. packageTar
+		local downloadedFile = self.installDir .. "/downloaded/" .. packageTar
+		print("Get " .. downloadUrl)
+		if not os.execute("curl --fail --progress-bar " .. downloadUrl .. " > " .. downloadedFile) then
+			error("Failed to download package " .. versionedPackage)
+		end
+	end
+end
+
+-- Given an existing package and version will extract downloaded files,
+-- installing the package
 function PackageManager:install(package, version)
 	local versionedPackage = package .. "-" .. version
 
 	if self:type(package) ~= "meta" then
-		-- Download the package .tar.gz
 		local packageTar = versionedPackage .. ".tar.gz"
 		local downloadUrl = self.baseUrl .. "/packages/" .. packageTar
 		local downloadedFile = self.installDir .. "/downloaded/" .. packageTar
-		print("Downloading | " .. versionedPackage)
-		if not os.execute("curl --fail --progress-bar " .. downloadUrl .. " > " .. downloadedFile) then
-			error("Failed to download package " .. versionedPackage)
-		end
-
-		-- Now extract the .tar.gz
-		print("Installing  | " .. versionedPackage)
-		if not os.execute("tar --extract --directory=" .. self.installDir .. " --file=" .. downloadedFile .. " 2> /dev/null") then
+		print("Installing " .. versionedPackage)
+		if not os.execute("tar --extract --directory=" .. self.installDir .. " --file=" .. downloadedFile) then
 			error("Failed to install package " .. versionedPackage)
 		end
 	end
-
-	-- And we should be done
-	print("-- Finished | " .. versionedPackage .. " --")
 end
 
 -- Require a package is installed (or reinstalled)
@@ -279,13 +284,22 @@ function PackageManager:request(mode, package, version)
 		-- Get list of dependencies
 		local dependencies = self:dependenciesList(package, version)
 
-		-- Install all dependencies and then the package
+		-- Download all dependencies and package
 		for _, dependency in ipairs(dependencies) do
 			local dependencyName = dependency[1]
 			local dependencyVersion = dependency[2]
 			if not self:isPackage(dependencyName) then
 				error("Dependency " .. dependencyName .. " of package " .. package .. " does not exist")
 			end
+			if not self:isInstalled(dependencyName, dependencyVersion) or mode == "reinstall" then
+				self:download(dependencyName, dependencyVersion)
+			end
+		end
+
+		-- Install all dependencies and package
+		for _, dependency in ipairs(dependencies) do
+			local dependencyName = dependency[1]
+			local dependencyVersion = dependency[2]
 			if not self:isInstalled(dependencyName, dependencyVersion) or mode == "reinstall" then
 				self:install(dependencyName, dependencyVersion)
 			end

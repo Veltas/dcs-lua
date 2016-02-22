@@ -16,21 +16,19 @@ end
 -- Returns nil on access error (file not exist, no permission, ...)
 local function isMode(path, mode)
 	local attr = lfs.attributes(path)
-	if attr then
-		return attr.mode == mode
-	else
+	if not attr then
 		return false
 	end
+	return attr.mode == mode
 end
 
 -- Return file/dir mode, can detect a symlink ("link")
 local function isLinkMode(path, mode)
 	local attr = lfs.symlinkattributes(path)
-	if attr then
-		return attr.mode == mode
-	else
+	if not attr then
 		return false
 	end
+	return attr.mode == mode
 end
 
 -- Mirrors a directory structure using symlinks (symbolic links)

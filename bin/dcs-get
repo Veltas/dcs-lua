@@ -93,10 +93,10 @@ xpcall(function ()
 
 		-- Try to install each given package
 		for _, package in ipairs(givenPackages) do
-			if not packageManager.isPackage(package) then
+			if not packageManager:isPackage(package) then
 				error("Package " .. package .. " not recognised")
 			end
-			packageManager.request(mode, package, packageManager.versions(package)())
+			packageManager:request(mode, package, packageManager:versions(package)())
 		end
 
 	-- Simply lists all the currently installed packages
@@ -104,9 +104,9 @@ xpcall(function ()
 
 		-- List nicely formatted names of installed packages
 		local installedNames = {}
-		for entryName, entryVersion in packageManager.installed() do
+		for entryName, entryVersion in packageManager:installed() do
 			local outString = entryName .. "-" .. entryVersion
-			if packageManager.isRequested(entryName, entryVersion) then
+			if packageManager:isRequested(entryName, entryVersion) then
 				outString = outString .. " (manual)"
 			end
 			table.insert(installedNames, outString)
@@ -122,14 +122,14 @@ xpcall(function ()
 
 		-- Get and sort all package names
 		local allPackages = {}
-		for package in packageManager.names() do
+		for package in packageManager:names() do
 			table.insert(allPackages, package)
 		end
 		table.sort(allPackages, caseInsensitiveCompare)
 
 		-- Print full descriptions of all packages
 		for _, package in ipairs(allPackages) do
-			print(packageManager.longDescription(package))
+			print(packageManager:longDescription(package))
 		end
 
 	-- Lets you search for a pattern in the package names
@@ -144,12 +144,12 @@ xpcall(function ()
 		end
 
 		-- Get list of packages that match all search strings
-		local results = packageManager.listMatched(searchStrings)
+		local results = packageManager:listMatched(searchStrings)
 
 		-- Sort and print results
 		table.sort(results, caseInsensitiveCompare)
 		for _, result in ipairs(results) do
-			print(packageManager.longDescription(result))
+			print(packageManager:longDescription(result))
 		end
 
 	elseif mode == "uninstall" then
@@ -164,7 +164,7 @@ xpcall(function ()
 		end
 		local versionedPackage = arg[2]
 
-		packageManager.generateSymlinks(versionedPackage)
+		packageManager:generateSymlinks(versionedPackage)
 
 	elseif mode == "package" or mode == "upload" then
 
@@ -172,11 +172,11 @@ xpcall(function ()
 
 	elseif mode == "update" then
 
-		packageManager.update()
+		packageManager:update()
 
 	elseif mode == "clean" then
 
-		packageManager.clean()
+		packageManager:clean()
 
 	-- Display help message
 	elseif mode == "help" or mode == "--help" or mode == "-h" then

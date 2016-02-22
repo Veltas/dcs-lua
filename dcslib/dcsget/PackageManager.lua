@@ -12,8 +12,7 @@ local function inherit(...)
 	return childTable
 end
 
--- Return file/dir mode "file", "directory", etc. (follows symlinks)
--- Returns nil on access error (file not exist, no permission, ...)
+-- Checks file mode ("directory", "file", etc.)
 local function isMode(path, mode)
 	local attr = lfs.attributes(path)
 	if not attr then
@@ -22,7 +21,7 @@ local function isMode(path, mode)
 	return attr.mode == mode
 end
 
--- Return file/dir mode, can detect a symlink ("link")
+-- Same as isMode but detects symlinks ("link")
 local function isLinkMode(path, mode)
 	local attr = lfs.symlinkattributes(path)
 	if not attr then

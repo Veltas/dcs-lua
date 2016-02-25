@@ -13,7 +13,7 @@ function PackageData.new(installDir)
 
 	packageData.loadedPackages = json.decode(packagesJson)
 	if not packageData.loadedPackages then
-		error("Failed to read json file from " .. installDir .. "/packages.json")
+		error("Failed reading json file " .. installDir .. "/packages.json")
 	end
 
 	return packageData

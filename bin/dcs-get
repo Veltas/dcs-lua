@@ -68,8 +68,9 @@ xpcall(function ()
 
 	local packageManager = PackageManager.new(installDir, baseUrl)
 
-	-- First command-line argument is used as the mode
 	local mode = arg[1]
+	table.remove(arg, 1)
+	local parameters = arg
 
 	-- Swap short mode strings out
 	local shortModeMap = {
@@ -88,11 +89,8 @@ xpcall(function ()
 	-- Installs/reinstalls a list of packages
 	if mode == "install" or mode == "reinstall" then
 
-		table.remove(arg, 1)
-		local givenPackages = arg
-
 		-- Try to install each given package
-		for _, package in ipairs(givenPackages) do
+		for _, package in ipairs(parameters) do
 			if not packageManager:isPackage(package) then
 				error("Package " .. package .. " not recognised")
 			end
@@ -135,16 +133,12 @@ xpcall(function ()
 	-- Lets you search for a pattern in the package names
 	elseif mode == "search" then
 
-		-- The rest of the arguments are search strings
-		table.remove(arg, 1)
-		local searchStrings = arg
-
-		if #searchStrings == 0 then
+		if #parameters == 0 then
 			error("Expected more parameters to use as search strings")
 		end
 
 		-- Get list of packages that match all search strings
-		local results = packageManager:listMatched(searchStrings)
+		local results = packageManager:listMatched(parameters)
 
 		-- Sort and print results
 		table.sort(results, caseInsensitiveCompare)
@@ -159,10 +153,10 @@ xpcall(function ()
 	elseif mode == "gensymlinks" then
 
 		-- Takes ONE versioned package
-		if #arg ~= 2 then
+		if #parameters ~= 1 then
 			error("Expected one extra argument for gensymlinks")
 		end
-		local versionedPackage = arg[2]
+		local versionedPackage = parameters[1]
 
 		packageManager:generateSymlinks(versionedPackage)
 

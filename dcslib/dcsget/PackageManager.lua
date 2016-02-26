@@ -63,10 +63,10 @@ function PackageManager.new(installDir, baseUrl)
 end
 
 -- Check if a package is installed, returns false if not installed or if not a loaded package
-function PackageManager:isInstalled(package, version)
-	if isMode(self.installDir .. "/" .. package .. "-" .. version, "directory") then
+function PackageManager:isInstalled(name, version)
+	if isMode(self.installDir .. "/" .. name .. "-" .. version, "directory") then
 		-- Check directory entry corresponds to a legit package
-		for checkVersion in self:versions(package) do
+		for checkVersion in self:versions(name) do
 			if checkVersion == version then
 				return true
 			end
@@ -277,36 +277,53 @@ function PackageManager:install(package, version)
 	end
 end
 
+local function uniqueAppend(t1, t2, t1set)
+	for _, v in ipairs(t2) do
+		t1set[v[1]] = t1set[v[1]] or {}
+		if not t1set[v[1]][v[2]] then
+			table.insert(t1, v)
+			t1set[v[1]][v[2]] = true
+		end
+	end
+end
+
 -- Require a package is installed (or reinstalled)
 -- mode is either "install" or "reinstall"
-function PackageManager:request(mode, package, version)
-	if mode == "reinstall" or not self:isInstalled(package, version) then
-		-- Get list of dependencies
-		local dependencies = self:dependenciesList(package, version)
+function PackageManager:request(mode, toInstall)
+	local dependencies = {}
+	local depSet = {}
+	local depCmp = function (a, b) return a[1] == b[1] and a[2] == b[2] end
+	for _, installPair in ipairs(toInstall) do
+		local name, version = installPair[1], installPair[2]
 
-		-- Download all dependencies and package
-		for _, dependency in ipairs(dependencies) do
-			local dependencyName = dependency[1]
-			local dependencyVersion = dependency[2]
-			if not self:isPackage(dependencyName) then
-				error("Dependency " .. dependencyName .. " of package " .. package .. " does not exist")
-			end
-			if not self:isInstalled(dependencyName, dependencyVersion) or mode == "reinstall" then
-				self:download(dependencyName, dependencyVersion)
-			end
+		if mode == "reinstall" or not self:isInstalled(name, version) then
+			-- Get list of dependencies
+			uniqueAppend(dependencies, self:dependenciesList(name, version), depSet, depCmp)
 		end
 
-		-- Install all dependencies and package
-		for _, dependency in ipairs(dependencies) do
-			local dependencyName = dependency[1]
-			local dependencyVersion = dependency[2]
-			if not self:isInstalled(dependencyName, dependencyVersion) or mode == "reinstall" then
-				self:install(dependencyName, dependencyVersion)
-			end
+		self:setRequested(name, version, true)
+	end
+
+	-- Download all dependencies and package
+	for _, dependency in ipairs(dependencies) do
+		local dependencyName = dependency[1]
+		local dependencyVersion = dependency[2]
+		if not self:isPackage(dependencyName) then
+			error("Dependency " .. dependencyName .. " of package " .. package .. " does not exist")
+		end
+		if not self:isInstalled(dependencyName, dependencyVersion) or mode == "reinstall" then
+			self:download(dependencyName, dependencyVersion)
 		end
 	end
 
-	self:setRequested(package, version, true)
+	-- Install all dependencies and package
+	for _, dependency in ipairs(dependencies) do
+		local dependencyName = dependency[1]
+		local dependencyVersion = dependency[2]
+		if not self:isInstalled(dependencyName, dependencyVersion) or mode == "reinstall" then
+			self:install(dependencyName, dependencyVersion)
+		end
+	end
 end
 
 function PackageManager:update()

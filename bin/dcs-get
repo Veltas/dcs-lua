@@ -89,13 +89,17 @@ xpcall(function ()
 	-- Installs/reinstalls a list of packages
 	if mode == "install" or mode == "reinstall" then
 
-		-- Try to install each given package
-		for _, package in ipairs(parameters) do
-			if not packageManager:isPackage(package) then
-				error("Package " .. package .. " not recognised")
+		local toInstall = {}
+		for _, packageName in ipairs(parameters) do
+			if packageManager:isPackage(packageName) then
+				table.insert(toInstall, {packageName, packageManager:versions(packageName)()})
+			elseif packageManager:splitVersionedName(packageName) then
+				table.insert(toInstall, {packageManager:splitVersionedName(packageName)})
+			else
+				error("Package " .. packageName .. " not recognised")
 			end
-			packageManager:request(mode, package, packageManager:versions(package)())
 		end
+		packageManager:request(mode, toInstall)
 
 	-- Simply lists all the currently installed packages
 	elseif mode == "list-installed" then
@@ -194,5 +198,5 @@ end,
 function (mainErrorMessage)
 	-- If we catch an exception, write error and exit with failure status
 	io.stderr:write(mainErrorMessage:gsub("^.*/(.-:.-: )", "%1", 1) .. "\n")
-	os.exit(false)
+	os.exit(1)
 end)

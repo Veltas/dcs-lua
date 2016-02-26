@@ -255,7 +255,7 @@ function PackageManager:download(package, version)
 		local downloadUrl = self.baseUrl .. "/packages/" .. packageTar
 		local downloadedFile = self.installDir .. "/downloaded/" .. packageTar
 		print("Get " .. downloadUrl)
-		if not os.execute("curl --fail --progress-bar " .. downloadUrl .. " > " .. downloadedFile) then
+		if not os.execute("curl --fail --silent " .. downloadUrl .. " > " .. downloadedFile) then
 			error("Failed to download package " .. versionedPackage)
 		end
 	end

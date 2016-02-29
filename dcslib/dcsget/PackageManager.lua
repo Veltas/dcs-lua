@@ -20,8 +20,8 @@ local function isLinkMode(path, mode)
 	return attr.mode == mode
 end
 
--- Mirrors a directory structure using symlinks (symbolic links)
-local function symlinkMirror(outputDir, targetDir)
+-- Generates list of symlinks to make for a mirrored directory structure
+local function symlinkMirrorList(outputDir, targetDir, theList)
 	if not lfs.attributes(outputDir) then
 		assert(lfs.mkdir(outputDir), "Unable to create dir " .. outputDir)
 	end
@@ -33,12 +33,10 @@ local function symlinkMirror(outputDir, targetDir)
 			local outputPath = outputDir.."/"..dirEntry
 			-- Symlinks and regular files get symlinked
 			if isLinkMode(entryPath, "link") or isLinkMode(entryPath, "file") then
-				if not os.execute("ln --symbolic --relative " .. entryPath .. " " .. outputPath) then
-					print("dcs-get: Failed to create symlink at " .. outputPath)
-				end
+				table.insert(theList, {entryPath, outputPath})
 			-- Directories are called recursively
 			elseif isMode(entryPath, "directory") then
-				symlinkMirror(outputPath, entryPath)
+				symlinkMirrorList(outputPath, entryPath, theList)
 			end
 		end
 	end
@@ -204,15 +202,81 @@ function PackageManager:generateSymlinks(versionedPackage)
 		["lib64"] = "lib64",
 		["lib32"] = "lib"
 	}
+	local mirrorList = {}
 	for from, to in pairs(linksToMake) do
 		local fromPath = self.installDir .. "/" .. versionedPackage .. "/" .. from
 		local toPath = self.installDir .. "/" .. to
 		if isMode(fromPath, "directory") then
-			symlinkMirror(toPath, fromPath)
+			symlinkMirrorList(toPath, fromPath, mirrorList)
 		end
+	end
+	for _, mirrors in ipairs(mirrorList) do
+		local targetPath, outputPath = mirrors[1], mirrors[2]
+		print("Linking " .. targetPath .. " to " .. outputPath)
+		assert(
+			os.execute("ln --symbolic --relative " .. targetPath .. " " .. outputPath),
+			"dcs-get: Failed to create symlink at " .. outputPath
+		)
 	end
 
 	print("Links generated for " .. versionedPackage)
+end
+
+-- Removes length of first string from beginning of second string
+local function getShortPath(installDir, longPath)
+	return longPath:sub(#installDir + 2, #longPath)
+end
+
+-- Implementation of package mode
+function PackageManager:packagePackage(versionedPackage)
+	local initialDir = lfs.currentdir()
+
+	assert(lfs.chdir(self.installDir))
+
+	-- Confirm directory exists
+	if not isMode(self.installDir .. "/" .. versionedPackage, "directory") then
+		error("Can't access directory " .. self.installDir .. "/" .. versionedPackage)
+	end
+
+	local linksToMake = {
+		["bin"] = "bin",
+		["share"] = "share",
+		["include"] = "include",
+		["lib"] = "lib64",
+		["lib64"] = "lib64",
+		["lib32"] = "lib"
+	}
+
+	-- Compile list of files from appropriate sections
+	local mirrorList = {}
+	for from, to in pairs(linksToMake) do
+		local fromPath = self.installDir .. "/" .. versionedPackage .. "/" .. from
+		local toPath = self.installDir .. "/" .. to
+		if isMode(fromPath, "directory") then
+			symlinkMirrorList(toPath, fromPath, mirrorList)
+		end
+	end
+
+	-- Create empty tarball
+	local tarball = self.installDir .. "/" .. versionedPackage .. ".tar"
+	assert(os.execute("tar --create --file=" .. tarball .. " --files-from=/dev/null"))
+
+	-- Add package files
+	assert(os.execute("tar --append --file=" .. tarball .. " " .. versionedPackage .. "/"))
+	for _, mirrors in ipairs(mirrorList) do
+		local _, outputPath = mirrors[1], mirrors[2]
+		if lfs.attributes(outputPath) then
+			assert(os.execute("tar --append --file=" .. tarball .. " " .. getShortPath(self.installDir, outputPath)))
+		end
+	end
+
+	lfs.chdir(initialDir)
+
+	-- Compress tarball and save in correct place
+	local targz = self.installDir .. "/downloaded/" .. versionedPackage .. ".tar.gz"
+	assert(os.execute("cat " .. tarball .. " | gzip > " .. targz))
+
+	print("Created " .. targz)
 end
 
 -- Gets a complete list of dependencies (root dependencies first)

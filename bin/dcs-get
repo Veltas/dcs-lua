@@ -164,7 +164,16 @@ xpcall(function ()
 
 		packageManager:generateSymlinks(versionedPackage)
 
-	elseif mode == "package" or mode == "upload" then
+	elseif mode == "package" then
+
+		if #parameters ~= 1 then
+			error("Expected one extra argument for packaging")
+		end
+		local versionedPackage = parameters[1]
+
+		packageManager:packagePackage(versionedPackage)
+
+	elseif mode == "upload" then
 
 		error("Not implemented")
 

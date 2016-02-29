@@ -22,17 +22,12 @@ end
 
 -- Mirrors a directory structure using symlinks (symbolic links)
 local function symlinkMirror(outputDir, targetDir)
-	-- Check output path exists
 	if not lfs.attributes(outputDir) then
-		-- If not then create it
-		if not lfs.mkdir(outputDir) then
-			error("Unable to use/create output symlink dir " .. outputDir)
-		end
+		assert(lfs.mkdir(outputDir), "Unable to create dir " .. outputDir)
 	end
 
 	-- Link files, recursively link directories (but not symlink directories)
 	for dirEntry in lfs.dir(targetDir) do
-		-- Ignore implicits
 		if dirEntry == "." or dirEntry == ".." then
 			break
 		end

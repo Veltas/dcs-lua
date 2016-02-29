@@ -28,20 +28,18 @@ local function symlinkMirror(outputDir, targetDir)
 
 	-- Link files, recursively link directories (but not symlink directories)
 	for dirEntry in lfs.dir(targetDir) do
-		if dirEntry == "." or dirEntry == ".." then
-			break
-		end
-
-		local entryPath = targetDir.."/"..dirEntry
-		local outputPath = outputDir.."/"..dirEntry
-		-- Symlinks and regular files get symlinked
-		if isLinkMode(entryPath, "link") or isLinkMode(entryPath, "file") then
-			if not os.execute("ln --symbolic --relative " .. entryPath .. " " .. outputPath) then
-				print("dcs-get: Failed to create symlink at " .. outputPath)
+		if not (dirEntry == "." or dirEntry == "..") then
+			local entryPath = targetDir.."/"..dirEntry
+			local outputPath = outputDir.."/"..dirEntry
+			-- Symlinks and regular files get symlinked
+			if isLinkMode(entryPath, "link") or isLinkMode(entryPath, "file") then
+				if not os.execute("ln --symbolic --relative " .. entryPath .. " " .. outputPath) then
+					print("dcs-get: Failed to create symlink at " .. outputPath)
+				end
+			-- Directories are called recursively
+			elseif isMode(entryPath, "directory") then
+				symlinkMirror(outputPath, entryPath)
 			end
-		-- Directories are called recursively
-		elseif isMode(entryPath, "directory") then
-			symlinkMirror(outputPath, entryPath)
 		end
 	end
 end
@@ -250,7 +248,7 @@ function PackageManager:download(package, version)
 		local downloadUrl = self.baseUrl .. "/packages/" .. packageTar
 		local downloadedFile = self.installDir .. "/downloaded/" .. packageTar
 		print("Get " .. downloadUrl)
-		if not os.execute("curl --fail --silent " .. downloadUrl .. " > " .. downloadedFile) then
+		if not os.execute("curl --fail --progress-bar " .. downloadUrl .. " > " .. downloadedFile) then
 			error("Failed to download package " .. versionedPackage)
 		end
 	end

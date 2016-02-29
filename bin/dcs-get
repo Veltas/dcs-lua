@@ -175,7 +175,14 @@ xpcall(function ()
 
 	elseif mode == "upload" then
 
-		error("Not implemented")
+		if #parameters ~= 1 then
+			error("Expected one extra argument for uploading")
+		end
+		local versionedPackage = parameters[1]
+
+		local uploadFile = installDir .. "/downloaded/" .. versionedPackage .. ".tar.gz"
+
+		assert(os.execute("curl -i -H \"Content-type: MultiPart/Form-Data\" -F upload=true -F foo=@" .. uploadFile .. " " .. baseUrl .. "/uploader.php"))
 
 	elseif mode == "update" then
 

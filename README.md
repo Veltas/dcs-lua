@@ -3,12 +3,6 @@ Replacement for dcs-get main executable in Lua
 
 This project is only of use to those using dcs-get at the University of Warwick
 
-##Status
-
-Test version that mostly works. Missing package, upload and uninstall modes.
-
-Package should be ready for dcs-get now under the name `dcs-lua`
-
 ##Installing
 
 I'm putting releases of it on dcs-get for testing. You can try it out if you have [dcs-get](http://backus.uwcs.co.uk/dcs-get/) installed.

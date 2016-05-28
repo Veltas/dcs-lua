@@ -57,162 +57,162 @@ https://github.com/Veltas/dcs-lua/issues
 
 xpcall(function ()
 
-	package.path = package.path .. ";" .. installDir .. "/dcslib/?.lua"
-	package.path = package.path .. ";" .. installDir .. "/dcslib/?/init.lua"
+  package.path = package.path .. ";" .. installDir .. "/dcslib/?.lua"
+  package.path = package.path .. ";" .. installDir .. "/dcslib/?/init.lua"
 
-	local PackageManager = require "dcsget.PackageManager"
+  local PackageManager = require "dcsget.PackageManager"
 
-	local function caseInsensitiveCompare(str1, str2)
-		return str1:lower() < str2:lower()
-	end
+  local function caseInsensitiveCompare(str1, str2)
+    return str1:lower() < str2:lower()
+  end
 
-	local packageManager = PackageManager.new(installDir, baseUrl)
+  local packageManager = PackageManager.new(installDir, baseUrl)
 
-	local mode = arg[1]
-	table.remove(arg, 1)
-	local parameters = arg
+  local mode = arg[1]
+  table.remove(arg, 1)
+  local parameters = arg
 
-	-- Swap short mode strings out
-	local shortModeMap = {
-		i = "install",
-		s = "search",
-		r = "reinstall",
-		g = "gensymlinks",
-		p = "package",
-		u = "upload",
-		l = "list",
-		li = "list-installed",
-		c = "clean"
-	}
-	mode = shortModeMap[mode] or mode
+  -- Swap short mode strings out
+  local shortModeMap = {
+    i = "install",
+    s = "search",
+    r = "reinstall",
+    g = "gensymlinks",
+    p = "package",
+    u = "upload",
+    l = "list",
+    li = "list-installed",
+    c = "clean"
+  }
+  mode = shortModeMap[mode] or mode
 
-	-- Installs/reinstalls a list of packages
-	if mode == "install" or mode == "reinstall" then
+  -- Installs/reinstalls a list of packages
+  if mode == "install" or mode == "reinstall" then
 
-		local toInstall = {}
-		for _, packageName in ipairs(parameters) do
-			if packageManager:isPackage(packageName) then
-				table.insert(toInstall, {packageName, packageManager:versions(packageName)()})
-			elseif packageManager:splitVersionedName(packageName) then
-				table.insert(toInstall, {packageManager:splitVersionedName(packageName)})
-			else
-				error("Package " .. packageName .. " not recognised")
-			end
-		end
-		packageManager:request(mode, toInstall)
+    local toInstall = {}
+    for _, packageName in ipairs(parameters) do
+      if packageManager:isPackage(packageName) then
+        table.insert(toInstall, {packageName, packageManager:versions(packageName)()})
+      elseif packageManager:splitVersionedName(packageName) then
+        table.insert(toInstall, {packageManager:splitVersionedName(packageName)})
+      else
+        error("Package " .. packageName .. " not recognised")
+      end
+    end
+    packageManager:request(mode, toInstall)
 
-	-- Simply lists all the currently installed packages
-	elseif mode == "list-installed" then
+  -- Simply lists all the currently installed packages
+  elseif mode == "list-installed" then
 
-		-- List nicely formatted names of installed packages
-		local installedNames = {}
-		for entryName, entryVersion in packageManager:installed() do
-			local outString = entryName .. "-" .. entryVersion
-			if packageManager:isRequested(entryName, entryVersion) then
-				outString = outString .. " (manual)"
-			end
-			table.insert(installedNames, outString)
-		end
-		table.sort(installedNames, caseInsensitiveCompare)
+    -- List nicely formatted names of installed packages
+    local installedNames = {}
+    for entryName, entryVersion in packageManager:installed() do
+      local outString = entryName .. "-" .. entryVersion
+      if packageManager:isRequested(entryName, entryVersion) then
+        outString = outString .. " (manual)"
+      end
+      table.insert(installedNames, outString)
+    end
+    table.sort(installedNames, caseInsensitiveCompare)
 
-		for _, name in ipairs(installedNames) do
-			print(name)
-		end
+    for _, name in ipairs(installedNames) do
+      print(name)
+    end
 
-	-- Lists all packages
-	elseif mode == "list" then
+  -- Lists all packages
+  elseif mode == "list" then
 
-		-- Get and sort all package names
-		local allPackages = {}
-		for package in packageManager:names() do
-			table.insert(allPackages, package)
-		end
-		table.sort(allPackages, caseInsensitiveCompare)
+    -- Get and sort all package names
+    local allPackages = {}
+    for package in packageManager:names() do
+      table.insert(allPackages, package)
+    end
+    table.sort(allPackages, caseInsensitiveCompare)
 
-		-- Print full descriptions of all packages
-		for _, package in ipairs(allPackages) do
-			print(packageManager:longDescription(package))
-		end
+    -- Print full descriptions of all packages
+    for _, package in ipairs(allPackages) do
+      print(packageManager:longDescription(package))
+    end
 
-	-- Lets you search for a pattern in the package names
-	elseif mode == "search" then
+  -- Lets you search for a pattern in the package names
+  elseif mode == "search" then
 
-		if #parameters == 0 then
-			error("Expected more parameters to use as search strings")
-		end
+    if #parameters == 0 then
+      error("Expected more parameters to use as search strings")
+    end
 
-		-- Get list of packages that match all search strings
-		local results = packageManager:listMatched(parameters)
+    -- Get list of packages that match all search strings
+    local results = packageManager:listMatched(parameters)
 
-		-- Sort and print results
-		table.sort(results, caseInsensitiveCompare)
-		for _, result in ipairs(results) do
-			print(packageManager:longDescription(result))
-		end
+    -- Sort and print results
+    table.sort(results, caseInsensitiveCompare)
+    for _, result in ipairs(results) do
+      print(packageManager:longDescription(result))
+    end
 
-	elseif mode == "uninstall" then
+  elseif mode == "uninstall" then
 
-		error("Not implemented")
+    error("Not implemented")
 
-	elseif mode == "gensymlinks" then
+  elseif mode == "gensymlinks" then
 
-		-- Takes ONE versioned package
-		if #parameters ~= 1 then
-			error("Expected one extra argument for gensymlinks")
-		end
-		local versionedPackage = parameters[1]
+    -- Takes ONE versioned package
+    if #parameters ~= 1 then
+      error("Expected one extra argument for gensymlinks")
+    end
+    local versionedPackage = parameters[1]
 
-		packageManager:generateSymlinks(versionedPackage)
+    packageManager:generateSymlinks(versionedPackage)
 
-	elseif mode == "package" then
+  elseif mode == "package" then
 
-		if #parameters ~= 1 then
-			error("Expected one extra argument for packaging")
-		end
-		local versionedPackage = parameters[1]
+    if #parameters ~= 1 then
+      error("Expected one extra argument for packaging")
+    end
+    local versionedPackage = parameters[1]
 
-		packageManager:packagePackage(versionedPackage)
+    packageManager:packagePackage(versionedPackage)
 
-	elseif mode == "upload" then
+  elseif mode == "upload" then
 
-		if #parameters ~= 1 then
-			error("Expected one extra argument for uploading")
-		end
-		local versionedPackage = parameters[1]
+    if #parameters ~= 1 then
+      error("Expected one extra argument for uploading")
+    end
+    local versionedPackage = parameters[1]
 
-		local uploadFile = installDir .. "/downloaded/" .. versionedPackage .. ".tar.gz"
+    local uploadFile = installDir .. "/downloaded/" .. versionedPackage .. ".tar.gz"
 
-		assert(os.execute("curl -i -H \"Content-type: MultiPart/Form-Data\" -F upload=true -F foo=@" .. uploadFile .. " " .. baseUrl .. "/uploader.php"))
+    assert(os.execute("curl -i -H \"Content-type: MultiPart/Form-Data\" -F upload=true -F foo=@" .. uploadFile .. " " .. baseUrl .. "/uploader.php"))
 
-	elseif mode == "update" then
+  elseif mode == "update" then
 
-		packageManager:update()
+    packageManager:update()
 
-	elseif mode == "clean" then
+  elseif mode == "clean" then
 
-		packageManager:clean()
+    packageManager:clean()
 
-	-- Display help message
-	elseif mode == "help" or mode == "--help" or mode == "-h" then
+  -- Display help message
+  elseif mode == "help" or mode == "--help" or mode == "-h" then
 
-		print(helpMessage)
-		print("Use dcs-get longhelp for more details\n")
+    print(helpMessage)
+    print("Use dcs-get longhelp for more details\n")
 
-	elseif mode == "longhelp" then
+  elseif mode == "longhelp" then
 
-		print(helpMessage)
-		print(extendedMessage)
+    print(helpMessage)
+    print(extendedMessage)
 
-	else
+  else
 
-		error("Unrecognised mode, try --help / help")
+    error("Unrecognised mode, try --help / help")
 
-	end
+  end
 
 end,
 
 function (mainErrorMessage)
-	-- If we catch an exception, write error and exit with failure status
-	io.stderr:write(mainErrorMessage:gsub("^.*/(.-:.-: )", "%1", 1) .. "\n")
-	os.exit(1)
+  -- If we catch an exception, write error and exit with failure status
+  io.stderr:write(mainErrorMessage:gsub("^.*/(.-:.-: )", "%1", 1) .. "\n")
+  os.exit(1)
 end)

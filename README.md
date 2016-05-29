@@ -13,20 +13,21 @@ Consider adding this to your session scripts!
 
 Alternatively clone the repo and run `make` in its root directory.
 
-##Using
+##Improvements
 
 Now when you install packages they're marked as manually installed, your pre-existing packages are still there and should remain installed correctly.
 
-When installed this version of the executable is used mostly the same way as the old one, check status section above for missing features. The following will give you a list of commands:
+The following will give you a list of commands:
 
     $ dcs-get help
 
-Improvements I claim over the original script:
+Improvements over the PHP script:
 + Reinstall function works correctly - gets list of dependencies and installs again from the ground up
 + Uninstall function
 + More responsive - PHP version would take a split second to start
 + More robust packaging function
 + Better search results / listing
++ Remembers which packages are requested and which were automatically installed
 
 This software is still in development. If you find bugs, please [report them in the issue tracker](https://github.com/Veltas/dcs-lua/issues).
 

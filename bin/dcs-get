@@ -57,6 +57,19 @@ https://github.com/Veltas/dcs-lua/issues
 
 xpcall(function ()
 
+  -- Patch os.execute() if old version
+  if _VERSION == "5.1" then
+    local oldEx = os.execute
+    function os.execute(command)
+      if not command then
+        return oldEx()
+      else
+        local result = oldEx(command)
+        return result == 0 or nil, result
+      end
+    end
+  end
+
   package.path = package.path .. ";" .. installDir .. "/dcslib/?.lua"
   package.path = package.path .. ";" .. installDir .. "/dcslib/?/init.lua"
 
@@ -152,7 +165,19 @@ xpcall(function ()
 
   elseif mode == "uninstall" then
 
-    error("Not implemented")
+    local toUninstall = {}
+    for _, packageName in ipairs(parameters) do
+      if packageManager:isPackage(packageName) then
+        table.insert(toUninstall, {packageName, packageManager:versions(packageName)()})
+      elseif packageManager:splitVersionedName(packageName) then
+        table.insert(toUninstall, {packageManager:splitVersionedName(packageName)})
+      else
+        error("Package " .. packageName .. " not recognised")
+      end
+    end
+    for _, entry in ipairs(toUninstall) do
+      packageManager:uninstall(entry[1], entry[2])
+    end
 
   elseif mode == "gensymlinks" then
 

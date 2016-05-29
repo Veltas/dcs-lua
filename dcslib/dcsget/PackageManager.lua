@@ -2,6 +2,11 @@ local lfs = require "lfs"
 local dcsget = require "dcsget"
 local PackageData = require "dcsget.PackageData"
 
+-- Checks file exists (isMode and isLinkMode already do this as well)
+local function fileExists(path)
+  return not not lfs.attributes(path)
+end
+
 -- Checks file mode ("directory", "file", etc.)
 local function isMode(path, mode)
   local attr = lfs.attributes(path)
@@ -96,14 +101,14 @@ function PackageManager:setRequested(package, version, newRequestedState)
       local requestedFileLines = {}
       for line in requestedFile:lines() do
         if line ~= package .. "-" .. version then
-          requestedFileLines:insert(line)
+          table.insert(requestedFileLines, line)
         end
       end
       requestedFile:close()
 
       -- Write ammended list
       requestedFile = io.output(self.installDir .. "/requested")
-      for _, line in ipairs(requestedFile) do
+      for _, line in ipairs(requestedFileLines) do
         requestedFile:write(line .. "\n")
       end
       requestedFile:close()
@@ -380,6 +385,70 @@ function PackageManager:request(mode, toInstall)
     if not self:isInstalled(dependencyName, dependencyVersion) or mode == "reinstall" then
       self:install(dependencyName, dependencyVersion)
     end
+  end
+end
+
+-- Gets list of the files that a package installs
+function PackageManager:listFiles(package, version)
+  if self:type(package) == "meta" then
+    return {}
+  end
+  local versioned = package .. "-" .. version
+  local packageFiles = {}
+  local packageDl = self.installDir .. "/downloaded/" .. versioned .. ".tar.gz"
+  local packageFilesTarIn = io.popen("tar tf " .. packageDl)
+  for file in packageFilesTarIn:lines() do
+    if not file:find("^%w*$") then
+      table.insert(packageFiles, file)
+    end
+  end
+  packageFilesTarIn:close()
+  return packageFiles
+end
+
+-- Removes a package, and restores files from other packages that have been displaced
+function PackageManager:uninstall(package, version)
+  local versioned = package .. "-" .. version
+
+  self:setRequested(package, version, false)
+
+  -- List the files of package to uninstall
+  local packageFiles = self:listFiles(package, version)
+
+  -- Index owning packages of files from other installed packages
+  local fileOwners = {}
+  for installedPackage, installedVersion in self:installed() do
+    local installedVersioned = installedPackage .. "-" .. installedVersion
+    if installedVersioned ~= versioned then
+      local idealFiles = self:listFiles(installedPackage, installedVersion)
+      for _, idealFile in ipairs(idealFiles) do
+        fileOwners[idealFile] = installedVersioned
+      end
+    end
+  end
+
+  -- Remove/replace package's files, list directories to remove
+  local terminalDirectories = {}
+  for _, file in ipairs(packageFiles) do
+    local fullPath = self.installDir .. "/" .. file
+    if isLinkMode(fullPath, "directory") then
+      table.insert(terminalDirectories, fullPath)
+    elseif fileExists(fullPath) then
+      assert(os.execute("rm " .. fullPath), "Failed to remove " .. file)
+      if fileOwners[file] then
+        io.stdout:write("Restoring " .. file .. " from " .. fileOwners[file] .. "\n")
+        local dlFile = self.installDir .. "/downloaded/" .. fileOwners[file] .. ".tar.gz"
+        if not os.execute("tar --extract --directory=" .. self.installDir .. " --file=" .. dlFile .. " " .. file) then
+          io.stderr:write("FAILED to write " .. file .. " ... submit an issue!\n")
+        end
+      end
+    end
+  end
+
+  -- Remove empty directories of package
+  table.sort(terminalDirectories, function (a, b) return a > b end)
+  for _, dir in ipairs(terminalDirectories) do
+    os.execute("rmdir " .. dir .. " 2>/dev/null")
   end
 end
 

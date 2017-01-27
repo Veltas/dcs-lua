@@ -1,3 +1,7 @@
+# Attention
+
+dcs-get as a whole has been **deprecated**. CompSoc is now using a solution over NFS in `~compsoc/packages`. I'd written an article about this but CompSoc's services are currently down. In short, you can replace `/var/tmp/dcs-get` for `/dcs/guest/compsoc/packages` in your `bashrc`. When I get around to it I'll publish an article on how to use the new system and appropriately package for it, probably [here](http://veltas.co.uk/docs/building.html).
+
 # dcs-lua
 Replacement for dcs-get main executable in Lua
 
